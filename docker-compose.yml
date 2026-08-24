@@ -1,0 +1,18 @@
+services:
+  splunk:
+    image: splunk/splunk:latest
+    container_name: soc-lab-splunk
+    hostname: soc-lab-splunk
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_GENERAL_TERMS=--accept-sgt-current-at-splunk-com
+      - SPLUNK_PASSWORD=${SPLUNK_PASSWORD}
+    ports:
+      - "8000:8000"
+      - "8089:8089"
+      - "9997:9997"
+    volumes:
+      - splunk-data:/opt/splunk/var
+
+volumes:
+  splunk-data:
