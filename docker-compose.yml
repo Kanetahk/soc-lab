@@ -3,17 +3,16 @@ services:
     image: splunk/splunk:9.3
     container_name: soc-lab-splunk
     hostname: soc-lab-splunk
+    network_mode: host
     environment:
       - SPLUNK_START_ARGS=--accept-license
       - SPLUNK_GENERAL_TERMS=--accept-sgt-current-at-splunk-com
       - SPLUNK_PASSWORD=${SPLUNK_PASSWORD}
       - SPLUNK_ENABLE_LISTEN=9997
-    ports:
-      - "8000:8000"   # Splunk Web
-      - "8089:8089"   # Management port (API)
-      - "9997:9997"   # Porta de recepção de dados de Forwarders
     volumes:
       - splunk-data:/opt/splunk/var
+      - splunk-etc:/opt/splunk/etc
 
 volumes:
   splunk-data:
+  splunk-etc:

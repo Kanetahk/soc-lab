@@ -13,11 +13,9 @@ attempts"), emitida uma vez por sessão, já com a contagem final
 calculada.
 
 ## Query SPL
-​```spl
 index=main "incorrect password attempts"
 | rex field=_raw "(?<user>[\w-]+)\s*:\s*(?<attempts>\d+) incorrect password attempts"
 | where attempts >= 3
-​```
 
 ## Configuração do Alert
 - Agendamento: cron `*/15 * * * *`, janela de busca de 15 minutos
@@ -26,11 +24,8 @@ index=main "incorrect password attempts"
 - Ação: Adiciona aos Alertas Disparados
 
 ## Notas de iteração da detecção
-A versão inicial casava com mensagens individuais de falha do PAM,
-mas o PAM emite formatos inconsistentes entre os tipos de falha,
-| rex field=_raw "(?<user>[\w-]+)\s*:\s*(?<attempts>\d+) incorrect password attempts"
-| where attempts >= 3
-​```
+A versão inicial fazia o matching (casamento de padrões) com mensagens individuais de falha do PAM, mas o PAM emite formatos inconsistentes entre os tipos de falha, gerando subcontagem (under-counting). O código foi revisado para corresponder à linha de sumário do próprio sudo, tornando a verificação mais confiável e imune à variância de formato das mensagens do PAM.
+
 ## Status
 Testado de ponta a ponta em condições próximas de produção (não só
 busca manual): disparou de verdade em 25/08/2026 00:00:02, confirmado
