@@ -1,6 +1,6 @@
 # SOC Lab
 
-Personal SOC Laboratory (Security Operations Center): Splunk, threat
+**Bottom line:** Personal SOC Laboratory (Security Operations Center): Splunk, threat
 detection, and response automation.
 
 *Read this in: [Português](./README.pt-br.md)*
