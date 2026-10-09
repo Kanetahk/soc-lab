@@ -40,9 +40,12 @@ Splunk Indexer/Search Head (container Docker)
 ## Detecções
 
 [T1110 - Brute Force (autenticação via sudo)](./detections/T1110-sudo-bruteforce.md)
-— dispara uma ação de alerta do tipo Webhook, consumida pelo
-repositório irmão [soar-lab](https://github.com/Kanetahk/soar-lab),
-que cuida do enriquecimento, persistência e notificação.
+— agendada a cada 15 minutos, dispara quando uma única sessão do `sudo`
+termina com 3 ou mais tentativas de senha incorreta. Sua ação de alerta
+do tipo Webhook é consumida pelo repositório irmão
+[splunk-alert-response-pipeline](https://github.com/Kanetahk/splunk-alert-response-pipeline),
+que cuida do enriquecimento, persistência e notificação. A query SPL, a
+configuração do alerta e as notas da detecção estão no arquivo linkado.
 
 ## Configuração
 
@@ -109,3 +112,8 @@ de campo/filtragem de dado sensível antes da indexação.
   container — suficiente pra provar o pipeline de detecção, não
   dimensionado nem arquitetado pra volume de log ou requisitos de
   disponibilidade de produção.
+
+## Related projects
+
+- [splunk-alert-response-pipeline](https://github.com/Kanetahk/splunk-alert-response-pipeline) - the automation pipeline these detections feed into.
+- [siem-detection-simulator](https://github.com/Kanetahk/siem-detection-simulator) - gerador de logs sintéticos para testar essas detecções sem um ataque real
