@@ -3,6 +3,8 @@
 ## MITRE ATT&CK
 [T1110 - Brute Force](https://attack.mitre.org/techniques/T1110/)
 
+*Read this in: [Português](./detections/T1110-sudo-bruteforce.pt-br.md)*
+
 ## Data source
 - Index: `main`
 - Sourcetype: `journald` (journalctl-identifier = sudo)
