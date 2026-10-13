@@ -10,21 +10,27 @@ and the alert itself are set up by hand (see Setup).
 
 *Read this in: [Português](./locales/pt-br/README.md)*
 
-## Quick start
+## First-use
 
 The whole lab, in order. Each `celery` and `uvicorn` command goes in its own terminal, started from the repo root.
 
-**First time only**, in the [splunk-alert-response-pipeline](https://github.com/Kanetahk/splunk-alert-response-pipeline)
-repo (see its [Setup](https://github.com/Kanetahk/splunk-alert-response-pipeline#setup)):
+**Start**, in the [splunk-alert-response-pipeline](https://github.com/Kanetahk/splunk-alert-response-pipeline#quick-start) repo:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+sudo pacman -S valkey    # Celery broker: Valkey (or Redis)
 sudo systemctl enable --now valkey
 ```
 
-The `.env` must be filled in before the first run.
+Create a `.env` in the pipeline repo root (never committed) with:
+
+```
+EMAIL_SENDER=
+EMAIL_APP_PASSWORD=
+EMAIL_RECIPIENT=
+```
 
 **Every time:**
 
@@ -42,6 +48,18 @@ source .venv/bin/activate
 cd src
 uvicorn api:app --host 0.0.0.0 --port 8001
 ```
+
+Then open Splunk Web at <http://127.0.0.1:8000> (user `admin`, password is `SPLUNK_PASSWORD` from the soc-lab `.env`).
+
+## Usage
+
+Confirm ingestion is working:
+```spl
+index=main sourcetype=journald
+```
+
+Confirm a specific detection's logic, see the SPL query and full alert
+configuration in [detections/T1110-sudo-bruteforce.md](./detections/T1110-sudo-bruteforce.md).
 
 ## Built with
 
@@ -79,7 +97,7 @@ splunk-alert-response-pipeline (FastAPI >> Celery >> DB >> email)
 soc-lab/
 ├── detections/
 │   ├── T1110-sudo-bruteforce.md
-│   └── T1110-sudo-bruteforce.pt-br.md>
+│   └── T1110-sudo-bruteforce.pt-br.md
 ├── locales/
 │   └── pt-br
 │       └── README.md
@@ -118,16 +136,6 @@ The Universal Forwarder is installed separately, directly on the host
 configure the journald modular input, and point it at
 `127.0.0.1:9997`.
 
-## Usage
-
-Confirm ingestion is working:
-```spl
-index=main sourcetype=journald
-```
-
-Confirm a specific detection's logic, see the SPL query and full alert
-configuration in [detections/T1110-sudo-bruteforce.md](./detections/T1110-sudo-bruteforce.md).
-
 ## Log ingestion
 
 Configured a native Splunk Universal Forwarder on the host, using the
@@ -138,6 +146,20 @@ forward them to the containerized Indexer via port 9997.
 which can include sensitive data (e.g., passwords passed inline). In a
 production SIEM, this would require field masking/sensitive data
 filtering before indexing.
+
+The alert is not created by `docker compose`. Create it in Splunk Web
+from the SPL query and alert configuration in [detections/T1110-sudo-bruteforce.md](./detections/T1110-sudo-bruteforce.md).
+Splunk's data and configuration (alerts included) live in two named
+volumes, `splunk-data` and `splunk-etc`. `docker compose down` keeps
+them; `docker compose down -v` deletes them, along with the alert.
+`auditd` also runs on the host, watching reads of `/etc/shadow` and
+writes to `/var/spool/cron` and `/etc/systemd/system`. A second
+Forwarder input (`monitor:///var/log/audit/audit.log`,
+`sourcetype=linux_audit`) ships those events to the same Indexer,
+and the Forwarder user reads the file through `log_group = splunkread`
+in `auditd.conf`. No detection is built on this data yet. The raw
+rules also match legitimate processes (`unix_chkpwd`, `systemd-userwork`),
+so a real alert will need to filter by process.
 
 ## Known limitations
 
@@ -162,22 +184,6 @@ filtering before indexing.
   container, sufficient to prove the detection pipeline, not sized
   or architected for production log volume or availability
   requirements.
-
-The alert is not created by `docker compose`. Create it in Splunk Web
-from the SPL query and alert configuration in [detections/T1110-sudo-bruteforce.md](./detections/T1110-sudo-bruteforce.md).
-
-Splunk's data and configuration (alerts included) live in two named
-volumes, `splunk-data` and `splunk-etc`. `docker compose down` keeps
-them; `docker compose down -v` deletes them, along with the alert.
-
-`auditd` also runs on the host, watching reads of `/etc/shadow` and
-writes to `/var/spool/cron` and `/etc/systemd/system`. A second
-Forwarder input (`monitor:///var/log/audit/audit.log`,
-sourcetype=linux_audit`) ships those events to the same Indexer,
-and the Forwarder user reads the file through `log_group = splunkread`
-in `auditd.conf`. No detection is built on this data yet. The raw
-rules also match legitimate processes (`unix_chkpwd`, `systemd-userwork`),
-so a real alert will need to filter by process.
 
 ## Related projects
 

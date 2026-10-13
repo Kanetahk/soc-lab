@@ -8,25 +8,31 @@ não apenas com uma busca manual. O `docker compose up` sobe o Splunk;
 o Universal Forwarder e o próprio alerta são configurados à mão (veja
 Configuração).
 
-*Read this in: [English](./README.md)*
+*Read this in: [English](../../README.md)*
 
-## Início rápido
+## Primeiro-uso
 
 O lab inteiro, em ordem. Cada comando `celery` e `uvicorn` vai no seu próprio terminal, iniciado na raiz do repositório.
 
-**Só na primeira vez**, no repositório [splunk-alert-response-pipeline](https://github.com/Kanetahk/splunk-alert-response-pipeline)
-(veja a [Configuração](https://github.com/Kanetahk/splunk-alert-response-pipeline/blob/main/locales/pt-BR/README.md#configuração) dele):
+**Início**, no repositório [splunk-alert-response-pipeline](https://github.com/Kanetahk/splunk-alert-response-pipeline/blob/main/locales/pt-br/README.md#início-rápido):
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+sudo pacman -S valkey    # broker do Celery: Valkey (ou Redis)
 sudo systemctl enable --now valkey
 ```
 
-O `.env` precisa estar preenchido antes da primeira execução.
+Crie um `.env` na raiz do repositório do pipeline (nunca commitado) com:
 
-**Toda vez:**
+```
+EMAIL_SENDER=
+EMAIL_APP_PASSWORD=
+EMAIL_RECIPIENT=
+```
+
+**Sempre:**
 
 ```bash
 # 1. soc-lab/ = Splunk
@@ -42,6 +48,18 @@ source .venv/bin/activate
 cd src
 uvicorn api:app --host 0.0.0.0 --port 8001
 ```
+
+Depois, abra o Splunk Web em <http://127.0.0.1:8000> (usuário `admin`, senha `SPLUNK_PASSWORD` do `.env` do soc-lab).
+
+## Uso
+
+Confirme que a ingestão está funcionando:
+```spl
+index=main sourcetype=journald
+```
+
+Confirme a lógica de uma detecção específica, veja a query SPL e a
+configuração completa do alerta em [detections/T1110-sudo-bruteforce.md](../../detections/T1110-sudo-bruteforce.md).
 
 ## Construído com
 
@@ -118,16 +136,6 @@ O Universal Forwarder é instalado separadamente, direto no host
 configure o input modular do journald e aponte para
 `127.0.0.1:9997`.
 
-## Uso
-
-Confirme que a ingestão está funcionando:
-```spl
-index=main sourcetype=journald
-```
-
-Confirme a lógica de uma detecção específica, veja a query SPL e a
-configuração completa do alerta em [detections/T1110-sudo-bruteforce.md](../../detections/T1110-sudo-bruteforce.md).
-
 ## Ingestão de log
 
 Configurado um Splunk Universal Forwarder nativo no host, usando o
@@ -138,6 +146,23 @@ e encaminhá-los ao Indexer containerizado pela porta 9997.
 linha de comando, o que pode incluir dado sensível (ex: senhas passadas
 inline). Em um SIEM de produção, isso exigiria mascaramento de campo e
 filtragem de dado sensível antes da indexação.
+
+O alerta não é criado pelo `docker compose`. Crie-o no Splunk Web a
+partir da query SPL e da configuração do alerta em [detections/T1110-sudo-bruteforce.md](../../detections/T1110-sudo-bruteforce.md).
+
+Os dados e a configuração do Splunk (alertas inclusos) ficam em dois
+volumes nomeados, `splunk-data` e `splunk-etc`. O `docker compose down`
+os mantém; o `docker compose down -v` os apaga, junto com o alerta.
+
+O `auditd` também roda no host, vigiando leituras de `/etc/shadow` e
+escritas em `/var/spool/cron` e `/etc/systemd/system`. Um segundo
+input do Forwarder (`monitor:///var/log/audit/audit.log`,
+`sourcetype=linux_audit`) envia esses eventos ao mesmo Indexer, e o
+usuário do Forwarder lê o arquivo por meio de `log_group = splunkread`
+no `auditd.conf`. Nenhuma detecção foi construída sobre esses dados
+ainda. As regras brutas também casam com processos legítimos
+(`unix_chkpwd`, `systemd-userwork`), então um alerta real precisará
+filtrar por processo.
 
 ## Limitações conhecidas
 
@@ -162,23 +187,6 @@ filtragem de dado sensível antes da indexação.
   suficiente para provar o pipeline de detecção, não dimensionado nem
   arquitetado para volume de log ou requisitos de disponibilidade de
   produção.
-
-O alerta não é criado pelo `docker compose`. Crie-o no Splunk Web a
-partir da query SPL e da configuração do alerta em [detections/T1110-sudo-bruteforce.md](../../detections/T1110-sudo-bruteforce.md).
-
-Os dados e a configuração do Splunk (alertas inclusos) ficam em dois
-volumes nomeados, `splunk-data` e `splunk-etc`. O `docker compose down`
-os mantém; o `docker compose down -v` os apaga, junto com o alerta.
-
-O `auditd` também roda no host, vigiando leituras de `/etc/shadow` e
-escritas em `/var/spool/cron` e `/etc/systemd/system`. Um segundo
-input do Forwarder (`monitor:///var/log/audit/audit.log`,
-`sourcetype=linux_audit`) envia esses eventos ao mesmo Indexer, e o
-usuário do Forwarder lê o arquivo por meio de `log_group = splunkread`
-no `auditd.conf`. Nenhuma detecção foi construída sobre esses dados
-ainda. As regras brutas também casam com processos legítimos
-(`unix_chkpwd`, `systemd-userwork`), então um alerta real precisará
-filtrar por processo.
 
 ## Projetos relacionados
 
