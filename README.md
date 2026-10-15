@@ -49,6 +49,12 @@ cd src
 uvicorn api:app --host 0.0.0.0 --port 8001
 ```
 
+To see the saved alerts, from the repo root (needs the `sqlite3` CLI, on Arch: `sudo pacman -S sqlite`):
+
+```bash
+sqlite3 -header -column data/soar.db "SELECT * FROM alerts;"
+```
+
 Then open Splunk Web at <http://127.0.0.1:8000> (user `admin`, password is `SPLUNK_PASSWORD` from the soc-lab `.env`).
 
 ## Usage
